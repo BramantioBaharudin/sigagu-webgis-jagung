@@ -1,0 +1,240 @@
+﻿{% extends "admin/layout_admin.html" %}
+
+{% block admin_content %}
+<div class="space-y-6">
+  <!-- Header & Action Buttons -->
+  <div class="harvest-card p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-700">
+        MANAJEMEN DATASET
+      </span>
+      <h1 class="text-2xl font-extrabold text-[#142d1d] mt-1">
+        Kelola Data Hasil Pertanian
+      </h1>
+      <p class="text-sm text-slate-600 mt-1">
+        Tambah, ubah, hapus data pertanian per kecamatan, atau impor dataset CSV/XLSX
+      </p>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-3">
+      <button type="button" onclick="openAddModal()" class="harvest-lime-btn px-4 py-2.5 text-xs shadow-sm">
+        + Tambah Data
+      </button>
+      <button type="button" onclick="document.getElementById('modalImport').classList.remove('hidden')"
+        class="px-4 py-2.5 rounded-full bg-[#142d1d] text-[#ccf34b] text-xs font-bold shadow-sm hover:opacity-95">
+        Import Dataset (CSV/XLSX)
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="harvest-card p-4 flex flex-wrap items-center justify-between gap-4">
+    <form method="GET" action="{{ url_for('admin_data_pertanian') }}" class="flex flex-wrap items-center gap-3">
+      <label for="filterTahun" class="text-xs font-bold text-slate-600">Pilih Tahun:</label>
+      <select id="filterTahun" name="tahun" onchange="this.form.submit()"
+        class="border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-bold text-[#142d1d]">
+        {% for y in years %}
+        <option value="{{ y }}" {% if y==selected_year %}selected{% endif %}>Tahun {{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+      <input type="text" id="searchKec" onkeyup="filterTable()" placeholder="Cari nama kecamatan..."
+        class="border border-slate-200 rounded-xl px-3.5 py-2 text-sm w-full sm:w-60 focus:outline-none focus:border-[#142d1d]" />
+      <span class="text-xs font-bold text-slate-500">Total: {{ rows|length }} Kecamatan</span>
+    </div>
+  </div>
+
+  <!-- Tabel Data Pertanian -->
+  <div class="harvest-card p-4 sm:p-6">
+    <div class="overflow-x-auto">
+      <table id="tableDataPertanian" class="w-full text-left text-sm border-collapse">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-500 text-xs uppercase">
+            <th class="py-3 px-3">No</th>
+            <th class="py-3 px-3">Kecamatan</th>
+            <th class="py-3 px-3 text-center">Tahun</th>
+            <th class="py-3 px-3 text-right">Luas Panen (Ha)</th>
+            <th class="py-3 px-3 text-right">Produksi (Ton)</th>
+            <th class="py-3 px-3 text-right">Produktivitas (Kw/Ha)</th>
+            <th class="py-3 px-3 text-center">Aksi (Admin)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+            <td class="py-2.5 px-3 text-slate-400 font-semibold">{{ loop.index }}</td>
+            <td class="py-2.5 px-3 font-bold text-[#142d1d]">{{ r.kecamatan }}</td>
+            <td class="py-2.5 px-3 text-center">{{ r.tahun }}</td>
+            <td class="py-2.5 px-3 text-right">{{ r.luas_panen | angka }}</td>
+            <td class="py-2.5 px-3 text-right font-bold text-emerald-800">{{ r.produksi | angka }}</td>
+            <td class="py-2.5 px-3 text-right">{{ r.produktivitas | angka }}</td>
+            <td class="py-2.5 px-3 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <button type="button" data-row='{{ r | tojson }}' onclick="openEditModal(this)"
+                  class="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold hover:bg-emerald-100">
+                  Edit
+                </button>
+                <form method="POST" action="{{ url_for('admin_data_pertanian', tahun=selected_year) }}"
+                  onsubmit="return confirm('Hapus data Kec. {{ r.kecamatan }} tahun {{ r.tahun }}?');">
+                  <input type="hidden" name="action" value="hapus" />
+                  <input type="hidden" name="kecamatan_id" value="{{ r.kecamatan_id }}" />
+                  <input type="hidden" name="tahun" value="{{ r.tahun }}" />
+                  <button type="submit"
+                    class="px-3 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold hover:bg-rose-100">
+                    Hapus
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="py-8 text-center text-slate-400">
+              Belum ada data untuk tahun {{ selected_year }}.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Tambah / Edit Data -->
+<div id="modalFormData" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="harvest-card max-w-md w-full p-6 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 id="modalFormTitle" class="text-lg font-extrabold text-[#142d1d]">Tambah / Ubah Data Pertanian</h3>
+      <button type="button" onclick="document.getElementById('modalFormData').classList.add('hidden')"
+        class="text-slate-400 hover:text-slate-700 font-bold text-lg">
+        ✕
+      </button>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_data_pertanian', tahun=selected_year) }}" class="space-y-3.5">
+      <input type="hidden" name="action" value="simpan" />
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Kecamatan</label>
+        <select id="formKecId" name="kecamatan_id" required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold">
+          {% for k in kecamatan %}
+          <option value="{{ k.id }}">{{ k.nama_kecamatan }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Tahun</label>
+        <select id="formTahun" name="tahun" required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-semibold">
+          {% for y in years %}
+          <option value="{{ y }}" {% if y==selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Luas Panen (Ha)</label>
+        <input type="number" step="any" min="0" id="formLuas" name="luas_panen" required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Produksi (Ton)</label>
+        <input type="number" step="any" min="0" id="formProduksi" name="produksi" required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm" />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Produktivitas (Kw/Ha)</label>
+        <input type="number" step="any" min="0" id="formProduktivitas" name="produktivitas" required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm" />
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('modalFormData').classList.add('hidden')"
+          class="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-600">
+          Batal
+        </button>
+        <button type="submit" class="harvest-lime-btn px-5 py-2 text-xs">
+          Simpan ke Database
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Import CSV / XLSX -->
+<div id="modalImport" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="harvest-card max-w-md w-full p-6 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 class="text-lg font-extrabold text-[#142d1d]">Import Dataset Pertanian (CSV / XLSX)</h3>
+      <button type="button" onclick="document.getElementById('modalImport').classList.add('hidden')"
+        class="text-slate-400 hover:text-slate-700 font-bold text-lg">
+        ✕
+      </button>
+    </div>
+
+    <form method="POST" action="{{ url_for('admin_data_pertanian', tahun=selected_year) }}"
+      enctype="multipart/form-data" class="space-y-4">
+      <input type="hidden" name="action" value="import" />
+
+      <div class="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 space-y-1">
+        <div class="font-bold text-[#142d1d]">Format File yang Didukung:</div>
+        <div>• File <code>.csv</code> dengan header: <code>nama_kecamatan,tahun,luas_panen,produksi,produktivitas</code>
+        </div>
+        <div>• File Excel <code>.xlsx</code> (1 sheet per tahun, seperti <em>Dataset Jagung 2018-2025.xlsx</em>).</div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Pilih File (.csv / .xlsx)</label>
+        <input type="file" name="file_dataset" accept=".csv,.xlsx" required
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs" />
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('modalImport').classList.add('hidden')"
+          class="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-600">
+          Batal
+        </button>
+        <button type="submit" class="harvest-lime-btn px-5 py-2 text-xs">
+          Upload &amp; Import
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openAddModal() {
+    document.getElementById("modalFormTitle").textContent = "Tambah Data Hasil Pertanian";
+    document.getElementById("formLuas").value = "";
+    document.getElementById("formProduksi").value = "";
+    document.getElementById("formProduktivitas").value = "";
+    document.getElementById("modalFormData").classList.remove("hidden");
+  }
+
+  function openEditModal(btn) {
+    const row = JSON.parse(btn.dataset.row);
+    document.getElementById("modalFormTitle").textContent = `Edit Data — Kec. ${row.kecamatan} (${row.tahun})`;
+    document.getElementById("formKecId").value = row.kecamatan_id;
+    document.getElementById("formTahun").value = row.tahun;
+    document.getElementById("formLuas").value = row.luas_panen;
+    document.getElementById("formProduksi").value = row.produksi;
+    document.getElementById("formProduktivitas").value = row.produktivitas;
+    document.getElementById("modalFormData").classList.remove("hidden");
+  }
+
+  function filterTable() {
+    const q = document.getElementById("searchKec").value.toLowerCase();
+    const trs = document.querySelectorAll("#tableDataPertanian tbody tr");
+    trs.forEach((tr) => {
+      const text = tr.textContent.toLowerCase();
+      tr.style.display = text.includes(q) ? "" : "none";
+    });
+  }
+</script>
+{% endblock %}

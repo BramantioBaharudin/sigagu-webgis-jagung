@@ -1,0 +1,214 @@
+﻿{% extends "operator/layout_operator.html" %}
+
+{% block operator_content %}
+<div class="space-y-6">
+  <!-- Header & Form Eksekusi Clustering -->
+  <div class="harvest-card p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <span class="text-xs font-extrabold uppercase tracking-wider text-amber-700">
+        ALGORITMA K-MEDOIDS (PAM)
+      </span>
+      <h1 class="text-2xl font-extrabold text-[#142d1d] mt-1">
+        Proses &amp; Hasil Clustering K-Medoids
+      </h1>
+      <p class="text-sm text-slate-600 mt-1">
+        Normalisasi Min-Max per tahun · Jarak Euclidean · Evaluasi menggunakan Silhouette Coefficient.
+      </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('operator_clustering', tahun=selected_year) }}" class="flex flex-wrap items-center gap-3">
+      <select
+        name="target"
+        class="border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs font-bold text-[#142d1d]"
+      >
+        <option value="{{ selected_year }}">Tahun {{ selected_year }}</option>
+        <option value="semua">Seluruh Tahun (2018–2025)</option>
+      </select>
+      <div class="flex items-center gap-2">
+        <label for="inputK" class="text-xs font-bold text-slate-500">Nilai k</label>
+        <input id="inputK" type="number" name="k" min="{{ min_k }}" max="{{ max_k }}" step="1"
+          placeholder="{{ default_k }}" inputmode="numeric"
+          title="Jumlah klaster ({{ min_k }}–{{ max_k }}). Kosongkan untuk memakai {{ default_k }}."
+          class="w-20 border border-slate-200 rounded-xl px-3 py-2.5 text-xs font-extrabold text-[#142d1d] text-center" />
+      </div>
+      <button type="submit" class="harvest-lime-btn px-5 py-2.5 text-xs shadow-sm">
+        Proses Clustering
+      </button>
+    </form>
+  </div>
+
+  <!-- Filter Tahun & Metrik Evaluasi Tahun Terpilih (Hanya Silhouette Coefficient) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+    <div class="harvest-card p-5">
+      <div class="text-xs font-bold text-slate-500">Filter Tahun Hasil</div>
+      <form method="GET" action="{{ url_for('operator_clustering') }}" class="mt-2">
+        <select
+          name="tahun"
+          onchange="this.form.submit()"
+          class="w-full border border-slate-200 rounded-xl px-3 py-2 text-base font-extrabold text-[#142d1d]"
+        >
+          {% for y in years %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>Tahun {{ y }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <div class="harvest-card p-5">
+      <div class="text-xs font-bold text-slate-500">Jumlah Klaster (k) — {{ selected_year }}</div>
+      <div class="text-2xl font-extrabold text-[#142d1d] mt-2">{{ summary.get('k') or '–' }}</div>
+      <div class="text-[11px] text-slate-500 mt-1">
+        {% if summary.get('k') %}Hasil tahun ini dihitung dengan k = {{ summary.get('k') }}{% else %}Belum diproses (bawaan k = {{ default_k }}){% endif %}
+      </div>
+    </div>
+
+
+    <div class="harvest-dark-card p-5">
+      <div class="text-xs font-bold text-emerald-200">Silhouette Coefficient ({{ selected_year }})</div>
+      <div class="text-2xl font-extrabold text-[#ccf34b] mt-2">
+        {{ summary.get('silhouette') | angka(4) if summary.get('silhouette') is not none else '–' }}
+      </div>
+      <div class="text-[11px] text-emerald-200 mt-1">Evaluasi kualitas klaster tahun {{ selected_year }}</div>
+    </div>
+
+    <div class="harvest-card p-5">
+      <div class="text-xs font-bold text-slate-500">Distribusi Anggota ({{ selected_year }})</div>
+      <div class="text-sm font-extrabold text-[#142d1d] mt-2">
+        {% for c in summary.get('counts', []) %}K{{ loop.index }}: {{ c }}{% if not loop.last %} · {% endif %}{% else %}–{% endfor %} Kecamatan
+      </div>
+      <div class="text-[11px] text-slate-500 mt-1">Total {{ summary.get('jumlah_data', 0) }} kecamatan</div>
+    </div>
+
+    <div class="harvest-card p-5">
+      <div class="text-xs font-bold text-slate-500">Kecamatan Medoid ({{ selected_year }})</div>
+      <div class="text-sm font-extrabold text-emerald-800 mt-2">
+        {{ summary.get('medoid', []) | join(', ') or '–' }}
+      </div>
+      <div class="text-[11px] text-slate-500 mt-1">{{ summary.get('k') or default_k }} Pusat Klaster Terpilih</div>
+    </div>
+  </div>
+
+    <!-- Grafik Silhouette Coefficient tiap tahun (dengan k masing-masing) -->
+  <div class="harvest-card p-4 sm:p-6">
+    <h2 class="text-base font-extrabold text-[#142d1d]">Grafik Silhouette Coefficient per Tahun</h2>
+    <p class="text-xs text-slate-500 mb-4">
+      Nilai Silhouette tiap tahun yang sudah diproses; setiap titik memakai nilai k hasil proses tahun tersebut.
+    </p>
+    <div class="relative h-64">
+      <canvas
+        id="chartClusterSil"
+        data-years='{{ years_asc | tojson }}'
+        data-summary='{{ summary_all | tojson }}'
+        data-selected="{{ selected_year }}"
+      ></canvas>
+    </div>
+  </div>
+
+
+  <!-- Tabel Hasil Clustering 33 Kecamatan -->
+  <div class="harvest-card p-6">
+    <h2 class="text-base font-extrabold text-[#142d1d] mb-4">
+      Tabel Hasil Pengelompokan 33 Kecamatan — Tahun {{ selected_year }}
+    </h2>
+
+    {% set label_by_k = {} %}
+    {% for item in legenda %}{% set _ = label_by_k.update({item.klaster: item.label}) %}{% endfor %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm border-collapse">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-500 text-xs uppercase">
+            <th class="py-3 px-3">No</th>
+            <th class="py-3 px-3">Kecamatan</th>
+            <th class="py-3 px-3 text-right">Luas Panen (Ha)</th>
+            <th class="py-3 px-3 text-right">Produksi (Ton)</th>
+            <th class="py-3 px-3 text-right">Produktivitas (Kw/Ha)</th>
+            <th class="py-3 px-3 text-center">Klaster</th>
+            <th class="py-3 px-3">Keterangan Klaster</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+              <td class="py-2.5 px-3 text-slate-400 font-semibold">{{ loop.index }}</td>
+              <td class="py-2.5 px-3 font-bold text-[#142d1d]">
+                {{ r.kecamatan }}
+                {% if r.is_medoid %}
+                  <span class="ml-1 px-2 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-extrabold">
+                    MEDOID
+                  </span>
+                {% endif %}
+              </td>
+              <td class="py-2.5 px-3 text-right">{{ r.luas_panen | angka }}</td>
+              <td class="py-2.5 px-3 text-right font-bold">{{ r.produksi | angka }}</td>
+              <td class="py-2.5 px-3 text-right">{{ r.produktivitas | angka }}</td>
+              <td class="py-2.5 px-3 text-center">
+                {% if r.klaster %}
+                  {% set wk = map_config['c' ~ r.klaster ~ '_color'] %}
+              <span class="px-3 py-1 rounded-full text-xs font-extrabold text-[#142d1d]" style="background: {{ wk }}33; border: 1px solid {{ wk }}">
+                    Klaster {{ r.klaster }}
+                  </span>
+                {% else %}
+                  <span class="text-xs text-slate-400">Belum diproses</span>
+                {% endif %}
+              </td>
+              <td class="py-2.5 px-3 text-xs text-slate-600 font-medium">
+                {{ label_by_k.get(r.klaster, '–') }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const ctx = document.getElementById("chartClusterSil");
+    if (!ctx || !window.Chart) return;
+
+    const yrs = JSON.parse(ctx.dataset.years || "[]");
+    const summaryData = JSON.parse(ctx.dataset.summary || "{}");
+    const selected = Number(ctx.dataset.selected);
+    const rows = yrs.map((y) => summaryData[y] || {});
+    const values = rows.map((s) => (s.silhouette === null || s.silhouette === undefined ? null : s.silhouette));
+    const ks = rows.map((s) => s.k || null);
+
+    new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: yrs.map((y, i) => (ks[i] ? `${y} (k=${ks[i]})` : String(y))),
+        datasets: [
+          {
+            label: "Silhouette Coefficient",
+            data: values,
+            borderColor: "#15803d",
+            backgroundColor: "rgba(21, 128, 61, 0.16)",
+            borderWidth: 3,
+            pointRadius: yrs.map((y) => (y === selected ? 7 : 4)),
+            pointBackgroundColor: yrs.map((y) => (y === selected ? "#ccf34b" : "#142d1d")),
+            pointBorderColor: "#142d1d",
+            tension: 0.3,
+            spanGaps: true,
+            fill: true,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: { y: { min: -0.1, max: 1, title: { display: true, text: "Silhouette Coefficient" } } },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: (item) =>
+                item.raw === null
+                  ? "Belum diproses"
+                  : `Silhouette: ${Number(item.raw).toFixed(4)} (k = ${ks[item.dataIndex]})`,
+            },
+          },
+        },
+      },
+    });
+  });
+</script>
+{% endblock %}

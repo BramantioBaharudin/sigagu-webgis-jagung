@@ -1,0 +1,106 @@
+{% extends "base_public.html" %}
+
+{% block title %}Registrasi Operator — SIGAGU{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch mt-2 sm:mt-4">
+  <!-- Kolom Visual Hero Jagung -->
+  <div
+    class="lg:col-span-6 rounded-3xl overflow-hidden relative min-h-[200px] sm:min-h-[280px] lg:min-h-[340px] flex items-end p-6 sm:p-8 text-white shadow-lg"
+    style="background: linear-gradient(180deg, rgba(20,45,29,0.25) 0%, rgba(20,45,29,0.92) 100%), url('{{ url_for('static', filename='img/hero_jagung.jpg') }}') center/cover no-repeat;"
+  >
+    <div>
+      <span class="px-3 py-1 rounded-full bg-amber-300 text-[#142d1d] text-xs font-extrabold">
+        PENDAFTARAN OPERATOR
+      </span>
+      <h1 class="text-xl sm:text-2xl font-extrabold mt-2.5 sm:mt-3">
+        Registrasi Akun Operator SIGAGU
+      </h1>
+      <p class="text-xs text-emerald-100/90 mt-1.5 sm:mt-2 leading-relaxed">
+        Setelah mendaftar, akun Anda akan berstatus <strong>Menunggu Validasi</strong> dan dapat digunakan untuk login setelah disetujui oleh Administrator di halaman Validasi Operator.
+      </p>
+    </div>
+  </div>
+
+  <!-- Kolom Form Registrasi -->
+  <div class="lg:col-span-6 harvest-card p-6 sm:p-8 flex flex-col justify-center">
+    <div class="text-center">
+      <img
+        src="{{ url_for('static', filename='img/logo_sigagu.jpg') }}"
+        alt="Logo SIGAGU"
+        class="w-14 h-14 mx-auto rounded-full object-cover shadow"
+      />
+      <h2 class="text-2xl font-extrabold text-[#142d1d] mt-3">Daftar Akun Operator</h2>
+      <p class="text-xs text-slate-500 mt-1">
+        Isi data berikut untuk mengajukan akun Operator baru
+      </p>
+    </div>
+
+    <form method="POST" action="{{ url_for('register') }}" class="mt-6 space-y-4">
+      <div>
+        <label for="nama_lengkap" class="block text-xs font-bold mb-1">Nama Lengkap</label>
+        <input
+          type="text"
+          id="nama_lengkap"
+          name="nama_lengkap"
+          value="{{ form.get('nama_lengkap', '') }}"
+          placeholder="Contoh: Budi Santoso"
+          required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#142d1d]"
+        />
+      </div>
+
+      <div>
+        <label for="username" class="block text-xs font-bold mb-1">Username</label>
+        <input
+          type="text"
+          id="username"
+          name="username"
+          value="{{ form.get('username', '') }}"
+          placeholder="4–30 karakter (huruf kecil, angka, titik, _)"
+          required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#142d1d]"
+        />
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label for="password" class="block text-xs font-bold mb-1">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Minimal 6 karakter"
+            required
+            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#142d1d]"
+          />
+        </div>
+
+        <div>
+          <label for="konfirmasi" class="block text-xs font-bold mb-1">Konfirmasi Password</label>
+          <input
+            type="password"
+            id="konfirmasi"
+            name="konfirmasi"
+            placeholder="Ulangi password"
+            required
+            class="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#142d1d]"
+          />
+        </div>
+      </div>
+
+      <button type="submit" class="w-full harvest-lime-btn py-3 text-sm shadow">
+        Kirim Pendaftaran Operator →
+      </button>
+    </form>
+
+    <div class="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-600">
+      Sudah memiliki akun yang disetujui?
+      <a href="{{ url_for('login') }}" class="font-extrabold text-emerald-800 hover:underline">
+        Kembali ke halaman Login
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,83 @@
+﻿{% extends "operator/layout_operator.html" %}
+
+{% block operator_content %}
+<div class="space-y-6">
+  <div class="harvest-card p-4 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+    <div>
+      <span class="text-xs font-extrabold uppercase tracking-wider text-amber-700">
+        PRATINJAU PEMETAAN SPASIAL
+      </span>
+      <h1 class="text-2xl font-extrabold text-[#142d1d] mt-1">
+        Pratinjau Pemetaan Web GIS
+      </h1>
+      <p class="text-sm text-slate-600 mt-1">
+        Pratinjau peta hasil clustering 33 kecamatan beserta legenda dan penjelasan karakteristik klaster (pengaturan warna &amp; penjelasan hanya dapat diubah oleh Admin).
+      </p>
+    </div>
+
+    <form method="GET" action="{{ url_for('operator_pemetaan') }}" class="flex flex-wrap items-center gap-2">
+      <label class="text-xs font-bold text-slate-500">Tahun Pratinjau:</label>
+      <select
+        name="tahun"
+        onchange="this.form.submit()"
+        class="border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-extrabold text-[#142d1d]"
+      >
+        {% for y in years %}
+          <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>Tahun {{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <!-- Pratinjau Peta -->
+    <div class="lg:col-span-8 harvest-card p-4">
+      <div
+        id="mapOperatorPreview"
+        data-tahun="{{ selected_year }}"
+        class="w-full h-[320px] sm:h-[460px] rounded-2xl"
+      ></div>
+    </div>
+
+    <!-- Panel Informasi Legenda & Karakteristik Klaster (Read-Only untuk Operator) -->
+    <div class="lg:col-span-4 harvest-card p-6 space-y-4">
+      <div>
+        <h2 class="text-base font-extrabold text-[#142d1d]">
+          Legenda &amp; Karakteristik Klaster ({{ selected_year }})
+        </h2>
+        <p class="text-xs text-slate-500 mt-0.5">
+          Mode pratinjau Operator (hanya lihat).
+        </p>
+      </div>
+
+      <div class="space-y-3">
+        {% for item in legenda %}
+          {% set p = item.profil %}
+          <div class="p-3.5 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="w-3.5 h-3.5 rounded inline-block" style="background: {{ item.warna }}"></span>
+                <span class="font-extrabold text-xs text-[#142d1d]">{{ item.label }}</span>
+              </div>
+              <span class="text-[11px] font-bold text-slate-500">{{ p.jumlah if p else 0 }} kec</span>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              {{ item.penjelasan or 'Belum ada hasil clustering.' }}
+            </p>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/map_gis.js') }}"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const mapEl = document.getElementById("mapOperatorPreview");
+    const tahun = mapEl ? Number(mapEl.dataset.tahun) : 2025;
+    initSigaguMap("mapOperatorPreview", tahun);
+  });
+</script>
+{% endblock %}
+

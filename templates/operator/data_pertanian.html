@@ -1,0 +1,197 @@
+﻿{% extends "operator/layout_operator.html" %}
+
+{% block operator_content %}
+<div class="space-y-6">
+  <!-- Header Card -->
+  <div class="harvest-card p-6">
+    <span class="text-xs font-extrabold uppercase tracking-wider text-amber-700">
+      PEMBARUAN DATA PERTANIAN
+    </span>
+    <h1 class="text-2xl font-extrabold text-[#142d1d] mt-1">
+      Kelola Data Hasil Pertanian
+    </h1>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="harvest-card p-4 flex flex-wrap items-center justify-between gap-4">
+    <form method="GET" action="{{ url_for('operator_data_pertanian') }}" class="flex flex-wrap items-center gap-3">
+      <label for="filterTahunOp" class="text-xs font-bold text-slate-600">Pilih Tahun:</label>
+      <select
+        id="filterTahunOp"
+        name="tahun"
+        onchange="this.form.submit()"
+        class="border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-bold text-[#142d1d]"
+      >
+        {% for y in years %}
+          <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>Tahun {{ y }}</option>
+        {% endfor %}
+      </select>
+    </form>
+
+    <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+      <input
+        type="text"
+        id="searchKecOp"
+        onkeyup="filterOperatorTable()"
+        placeholder="Cari nama kecamatan..."
+        class="border border-slate-200 rounded-xl px-3.5 py-2 text-sm w-full sm:w-60 focus:outline-none focus:border-[#142d1d]"
+      />
+      <span class="text-xs font-bold text-slate-500">Total: {{ rows|length }} Kecamatan</span>
+    </div>
+  </div>
+
+  <!-- Tabel Data Pertanian (Khusus Operator: Hanya Tombol Edit) -->
+  <div class="harvest-card p-4 sm:p-6">
+    <div class="overflow-x-auto">
+      <table id="tableOperatorData" class="w-full text-left text-sm border-collapse">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-500 text-xs uppercase">
+            <th class="py-3 px-3">No</th>
+            <th class="py-3 px-3">Kecamatan</th>
+            <th class="py-3 px-3 text-center">Tahun</th>
+            <th class="py-3 px-3 text-right">Luas Panen (Ha)</th>
+            <th class="py-3 px-3 text-right">Produksi (Ton)</th>
+            <th class="py-3 px-3 text-right">Produktivitas (Kw/Ha)</th>
+            <th class="py-3 px-3 text-center">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+              <td class="py-2.5 px-3 text-slate-400 font-semibold">{{ loop.index }}</td>
+              <td class="py-2.5 px-3 font-bold text-[#142d1d]">{{ r.kecamatan }}</td>
+              <td class="py-2.5 px-3 text-center">{{ r.tahun }}</td>
+              <td class="py-2.5 px-3 text-right">{{ r.luas_panen | angka }}</td>
+              <td class="py-2.5 px-3 text-right font-bold text-emerald-800">{{ r.produksi | angka }}</td>
+              <td class="py-2.5 px-3 text-right">{{ r.produktivitas | angka }}</td>
+              <td class="py-2.5 px-3 text-center">
+                <button
+                  type="button"
+                  data-row='{{ r | tojson }}'
+                  onclick="openOperatorEditModal(this)"
+                  class="px-3.5 py-1.5 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 text-xs font-bold hover:bg-amber-100"
+                >
+                  Ubah Data
+                </button>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="7" class="py-8 text-center text-slate-400">
+                Belum ada data untuk tahun {{ selected_year }}.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Data (Khusus Operator) -->
+<div id="modalOperatorEdit" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+  <div class="harvest-card max-w-md w-full p-6 space-y-4">
+    <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+      <h3 id="modalOpTitle" class="text-lg font-extrabold text-[#142d1d]">Ubah Data Hasil Pertanian</h3>
+      <button
+        type="button"
+        onclick="document.getElementById('modalOperatorEdit').classList.add('hidden')"
+        class="text-slate-400 hover:text-slate-700 font-bold text-lg"
+      >
+        ✕
+      </button>
+    </div>
+
+    <form method="POST" action="{{ url_for('operator_data_pertanian', tahun=selected_year) }}" class="space-y-3.5">
+      <input type="hidden" id="opKecId" name="kecamatan_id" />
+      <input type="hidden" id="opTahun" name="tahun" />
+
+      <div>
+        <label class="block text-xs font-bold mb-1 text-slate-500">Kecamatan &amp; Tahun</label>
+        <input
+          type="text"
+          id="opKecDisplay"
+          disabled
+          class="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-700"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Luas Panen (Ha)</label>
+        <input
+          type="number"
+          step="any"
+          min="0"
+          id="opLuas"
+          name="luas_panen"
+          required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Produksi (Ton)</label>
+        <input
+          type="number"
+          step="any"
+          min="0"
+          id="opProduksi"
+          name="produksi"
+          required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm"
+        />
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold mb-1">Produktivitas (Kw/Ha)</label>
+        <input
+          type="number"
+          step="any"
+          min="0"
+          id="opProduktivitas"
+          name="produktivitas"
+          required
+          class="w-full border border-slate-200 rounded-xl px-3.5 py-2 text-sm"
+        />
+      </div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button
+          type="button"
+          onclick="document.getElementById('modalOperatorEdit').classList.add('hidden')"
+          class="px-4 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-600"
+        >
+          Batal
+        </button>
+        <button type="submit" class="harvest-lime-btn px-5 py-2 text-xs">
+          Simpan Perubahan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openOperatorEditModal(btn) {
+    const row = JSON.parse(btn.dataset.row);
+    document.getElementById("modalOpTitle").textContent = `Ubah Data — Kec. ${row.kecamatan}`;
+    document.getElementById("opKecId").value = row.kecamatan_id;
+    document.getElementById("opTahun").value = row.tahun;
+    document.getElementById("opKecDisplay").value = `Kec. ${row.kecamatan} — Tahun ${row.tahun}`;
+    document.getElementById("opLuas").value = row.luas_panen;
+    document.getElementById("opProduksi").value = row.produksi;
+    document.getElementById("opProduktivitas").value = row.produktivitas;
+    document.getElementById("modalOperatorEdit").classList.remove("hidden");
+  }
+
+  function filterOperatorTable() {
+    const q = document.getElementById("searchKecOp").value.toLowerCase();
+    const trs = document.querySelectorAll("#tableOperatorData tbody tr");
+    trs.forEach((tr) => {
+      const text = tr.textContent.toLowerCase();
+      tr.style.display = text.includes(q) ? "" : "none";
+    });
+  }
+</script>
+{% endblock %}
+

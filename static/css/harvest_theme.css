@@ -1,0 +1,271 @@
+/* SIGAGU — HARVEST Inspired Agricultural Theme */
+body {
+  background-color: #f1f4f2;
+  color: #142d1d;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.harvest-card {
+  background-color: #ffffff;
+  border-radius: 22px;
+  border: 1px solid rgba(20, 45, 29, 0.06);
+  box-shadow: 0 10px 28px -6px rgba(20, 45, 29, 0.05);
+}
+
+.harvest-dark-card {
+  background-color: #142d1d;
+  color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 14px 32px -6px rgba(20, 45, 29, 0.18);
+}
+
+.harvest-sidebar {
+  background-color: #142d1d;
+  color: #ffffff;
+}
+
+.harvest-lime-btn {
+  background-color: #ccf34b;
+  color: #142d1d;
+  font-weight: 700;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.harvest-lime-btn:hover {
+  background-color: #b8e62e;
+  transform: translateY(-1px);
+}
+
+.harvest-pill {
+  background-color: #ffffff;
+  border-radius: 9999px;
+  border: 1px solid rgba(20, 45, 29, 0.08);
+  box-shadow: 0 4px 14px rgba(20, 45, 29, 0.03);
+}
+
+.leaflet-container {
+  font-family: inherit;
+  z-index: 10;
+}
+
+.leaflet-container img.leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+
+/* ===================================================================
+   Panel Admin & Operator: sidebar collapsible + responsif
+   =================================================================== */
+.panel-sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 16rem;
+  max-width: 85vw;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+  overflow-x: hidden;
+  z-index: 60;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease, width 0.25s ease, padding 0.25s ease;
+}
+
+body.drawer-open .panel-sidebar {
+  transform: translateX(0);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.35);
+}
+
+.panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 24, 16, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 55;
+}
+
+body.drawer-open .panel-overlay {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.drawer-open {
+  overflow: hidden;
+}
+
+.panel-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(20, 45, 29, 0.08);
+}
+
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  color: #142d1d;
+  background: #f1f4f2;
+  border: 1px solid rgba(20, 45, 29, 0.08);
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sidebar-toggle:hover {
+  background: #e3ebe5;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+
+.nav-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.nav-link-active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ccf34b;
+}
+
+.nav-link-foot {
+  font-size: 0.75rem;
+  padding: 0.55rem 1rem;
+}
+
+.nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.nav-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nav-badge {
+  margin-left: auto;
+  padding: 0.1rem 0.5rem;
+  border-radius: 9999px;
+  background: #fbbf24;
+  color: #142d1d;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@media (min-width: 1024px) {
+  .panel-sidebar {
+    position: sticky;
+    height: 100vh;
+    flex-shrink: 0;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .panel-overlay {
+    display: none;
+  }
+
+  body.drawer-open {
+    overflow: auto;
+  }
+
+  .panel-topbar {
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: none;
+    padding: 1rem 1.5rem 0;
+    position: static;
+  }
+
+  .panel-topbar > div {
+    display: none;
+  }
+
+  html.sidebar-collapsed .panel-sidebar {
+    width: 4.5rem;
+    padding: 1.25rem 0.75rem;
+  }
+
+  html.sidebar-collapsed .brand {
+    justify-content: center;
+  }
+
+  html.sidebar-collapsed .brand-text,
+  html.sidebar-collapsed .nav-label {
+    display: none;
+  }
+
+  html.sidebar-collapsed .nav-link {
+    justify-content: center;
+    padding: 0.7rem 0;
+  }
+
+  html.sidebar-collapsed .nav-badge {
+    position: absolute;
+    top: 0.1rem;
+    right: 0.1rem;
+    margin: 0;
+    padding: 0 0.35rem;
+    font-size: 10px;
+  }
+}
+
+/* Modal: selalu muat di layar kecil */
+div.fixed.inset-0.z-50 > div {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  width: 100%;
+}
+
+/* Tabel: scroll horizontal di layar sempit */
+.overflow-x-auto > table {
+  min-width: 34rem;
+}
+
+@media (max-width: 640px) {
+  .harvest-card,
+  .harvest-dark-card {
+    border-radius: 18px;
+  }
+  .overflow-x-auto select,
+  .harvest-card form select,
+  .harvest-card form input[type="text"],
+  .harvest-card form input[type="number"],
+  .harvest-card form input[type="password"] {
+    max-width: 100%;
+  }
+}

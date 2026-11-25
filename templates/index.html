@@ -1,0 +1,417 @@
+﻿{% extends "base_public.html" %}
+
+{% block content %}
+<div class="space-y-6">
+  <!-- Pill Filter Bar -->
+  <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-4">
+    <div class="bg-white border border-[#142d1d]/10 shadow-sm rounded-2xl xl:rounded-full px-5 sm:px-6 py-3 sm:py-3.5 flex items-center gap-3 w-full xl:w-auto xl:flex-1">
+      <div>
+        <div class="text-base md:text-lg font-extrabold text-[#142d1d] leading-snug">
+          Pemetaan Karakteristik Produksi Jagung 33 Kecamatan ({{ selected_year }})
+        </div>
+      </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('index') }}" class="w-full xl:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+      <div class="harvest-pill px-4 sm:px-5 py-2.5 flex items-center justify-between sm:justify-start gap-2.5 flex-1 sm:flex-initial">
+        <label for="selectKec" class="text-sm font-bold text-slate-600">Kecamatan:</label>
+        <select
+          id="selectKec"
+          name="kecamatan"
+          onchange="this.form.submit()"
+          class="font-extrabold text-sm md:text-base bg-transparent focus:outline-none text-[#142d1d] cursor-pointer"
+        >
+          {% for k in kecamatan %}
+            <option value="{{ k.id }}" {% if k.id == selected_id %}selected{% endif %}>
+              {{ k.nama_kecamatan }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="harvest-pill px-4 sm:px-5 py-2.5 flex items-center justify-between sm:justify-start gap-2.5">
+        <label for="selectTahun" class="text-sm font-bold text-slate-600">Tahun:</label>
+        <select
+          id="selectTahun"
+          name="tahun"
+          onchange="this.form.submit()"
+          class="font-extrabold text-sm md:text-base bg-transparent focus:outline-none text-[#142d1d] cursor-pointer"
+        >
+          {% for y in years %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </form>
+  </div>
+
+  <!-- Peta GIS & Detail Kecamatan -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+    <div class="lg:col-span-7 xl:col-span-8 harvest-card p-3 sm:p-4">
+      <div id="mapPublic" class="w-full h-[320px] sm:h-[400px] lg:h-[450px] rounded-2xl"></div>
+    </div>
+
+    <div class="lg:col-span-5 xl:col-span-4 harvest-dark-card p-5 sm:p-6 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="px-3 py-1 rounded-full bg-[#ccf34b] text-[#142d1d] text-xs font-extrabold">
+            Tahun {{ selected_year }}
+          </span>
+          <span
+            id="badgeMedoid"
+            class="text-xs font-bold text-amber-300 {% if not selected or not selected.is_medoid %}hidden{% endif %}"
+          >
+            ⭐ Pusat Klaster (Medoid)
+          </span>
+        </div>
+
+        <h3 id="lblKecName" class="text-2xl font-extrabold mt-3">
+          Kec. {{ selected_name }}
+        </h3>
+        <p id="lblKecKlaster" class="text-xs text-emerald-200 mt-1 font-semibold">
+          {% if selected and selected.klaster %}
+            {{ map_config['c' ~ selected.klaster ~ '_label'] }}
+          {% else %}
+            Klik poligon kecamatan pada peta untuk memperbarui grafik &amp; tabel evaluasi di bawah.
+          {% endif %}
+        </p>
+
+        {% if selected %}
+          <div class="mt-5 grid grid-cols-2 gap-2.5 sm:gap-3">
+            <div class="bg-white/10 rounded-xl p-2.5 sm:p-3">
+              <div class="text-[11px] text-emerald-200">Luas Panen</div>
+              <div id="valLuas" class="text-base sm:text-lg font-extrabold mt-0.5 whitespace-nowrap">
+                {{ selected.luas_panen | angka }} <span class="text-xs font-normal">Ha</span>
+              </div>
+            </div>
+            <div class="bg-white/10 rounded-xl p-2.5 sm:p-3">
+              <div class="text-[11px] text-emerald-200">Produksi Jagung</div>
+              <div id="valProduksi" class="text-base sm:text-lg font-extrabold text-[#ccf34b] mt-0.5 whitespace-nowrap">
+                {{ selected.produksi | angka }} <span class="text-xs font-normal text-white">Ton</span>
+              </div>
+            </div>
+            <div class="bg-white/10 rounded-xl p-2.5 sm:p-3">
+              <div class="text-[11px] text-emerald-200">Produktivitas</div>
+              <div id="valProduktivitas" class="text-base sm:text-lg font-extrabold mt-0.5 whitespace-nowrap">
+                {{ selected.produktivitas | angka }} <span class="text-xs font-normal">Kw/Ha</span>
+              </div>
+            </div>
+            <div class="bg-white/10 rounded-xl p-2.5 sm:p-3">
+              <div class="text-[11px] text-emerald-200">Silhouette ({{ selected_year }})</div>
+              <div id="valSilhouette" class="text-base sm:text-lg font-extrabold mt-0.5 whitespace-nowrap">
+                {{ selected.silhouette | angka(4) if selected.silhouette is not none else '–' }}
+              </div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <a href="#sectionEvaluasi" class="harvest-lime-btn py-2.5 text-center text-xs block mt-6">
+        Lihat Grafik &amp; Evaluasi ↓
+      </a>
+    </div>
+  </div>
+
+  <!-- Legenda Karakteristik Klaster & Tabel Profil Rata-rata Variabel -->
+  <div class="harvest-card p-5 sm:p-6 md:p-7 space-y-5 sm:space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h3 class="text-lg md:text-xl font-extrabold text-[#142d1d]">
+          Legenda &amp; Karakteristik Klaster ({{ selected_year }})
+        </h3>
+        <p class="text-sm text-slate-500 mt-0.5">
+          Ringkasan karakteristik produksi jagung dan titik pusat klaster (Medoid) pada masing-masing kelompok.
+        </p>
+      </div>
+      {% if summary.get('silhouette') is not none %}
+        <span class="px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-sm font-extrabold text-emerald-800">
+          Silhouette Coefficient {{ selected_year }}: {{ summary.get('silhouette') | angka(4) }}
+        </span>
+      {% endif %}
+    </div>
+
+    <!-- 3 Kartu Legenda & Penjelasan (Lebih Simpel & Font Lebih Besar) -->
+    <div class="grid grid-cols-1 {% if legenda|length >= 4 %}md:grid-cols-2 xl:grid-cols-3{% else %}lg:grid-cols-3{% endif %} gap-4 sm:gap-5">
+      {% for item in legenda %}
+        <div class="p-5 rounded-2xl border border-slate-200/90 bg-slate-50/70 flex flex-col justify-between shadow-sm">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="w-4 h-4 rounded-md shrink-0 inline-block shadow-sm" style="background: {{ item.warna }}"></span>
+                <span class="font-extrabold text-base md:text-lg text-[#142d1d] leading-snug break-words">{{ item.label }}</span>
+              </div>
+              {% if item.profil %}
+                <span class="text-xs md:text-sm font-bold px-3 py-1 rounded-full bg-white border border-slate-200 text-slate-700 whitespace-nowrap shrink-0">
+                  {{ item.profil.jumlah }} Kecamatan
+                </span>
+              {% endif %}
+            </div>
+
+            <p class="text-sm md:text-[15px] text-slate-700 mt-3 leading-relaxed font-medium">
+              {{ item.penjelasan or 'Belum ada data hasil clustering untuk tahun ini.' }}
+            </p>
+          </div>
+
+          {% if item.profil and item.profil.medoid %}
+            <div class="mt-4 pt-3 border-t border-slate-200/80 text-xs md:text-sm text-slate-600">
+              Pusat Klaster (Medoid): <strong class="font-extrabold text-[#142d1d]">{{ item.profil.medoid | join(', ') }}</strong>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Collapsible: Tabel Profil Rata-rata Variabel per Klaster -->
+    <details class="group border-t border-slate-200/80 pt-4">
+      <summary class="list-none cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 hover:bg-slate-200/80 text-sm font-bold text-[#142d1d] transition select-none">
+        <span>Lihat Tabel Rata-rata Variabel</span>
+        <span class="text-xs transition-transform duration-200 group-open:rotate-180">▼</span>
+      </summary>
+
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-left text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 text-slate-500 text-xs md:text-sm uppercase">
+              <th class="py-3 px-4">Klaster</th>
+              <th class="py-3 px-4 text-center">Jumlah Anggota</th>
+              <th class="py-3 px-4 text-right">Rata-rata Luas Panen (Ha)</th>
+              <th class="py-3 px-4 text-right">Rata-rata Produksi (Ton)</th>
+              <th class="py-3 px-4 text-right">Rata-rata Produktivitas (Kw/Ha)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in legenda %}
+              {% set p = item.profil %}
+              <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+                <td class="py-3 px-4 font-extrabold text-[#142d1d] whitespace-nowrap">
+                  <div class="inline-flex items-center gap-2.5">
+                    <span class="w-3.5 h-3.5 rounded shrink-0 inline-block" style="background: {{ item.warna }}"></span>
+                    <span>{{ item.label }}</span>
+                  </div>
+                </td>
+                <td class="py-3 px-4 text-center font-bold whitespace-nowrap">{{ p.jumlah if p else 0 }} Kecamatan</td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">{{ p.luas_panen | angka if p else '–' }}</td>
+                <td class="py-3 px-4 text-right font-extrabold text-[#142d1d] whitespace-nowrap">{{ p.produksi | angka if p else '–' }}</td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">{{ p.produktivitas | angka if p else '–' }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </div>
+
+  <!-- Bawah Peta: Grafik Perkembangan Tahun ke Tahun & Tabel Evaluasi -->
+  <div id="sectionEvaluasi" class="harvest-card p-5 sm:p-6 md:p-7 space-y-5 sm:space-y-6">
+    <h3 class="text-lg md:text-xl font-extrabold text-[#142d1d]">
+      Grafik &amp; Tabel Evaluasi Hasil Pertanian (2018–2025) —
+      <span id="lblEvalKec" class="text-emerald-800">Kec. {{ selected_name }}</span>
+    </h3>
+
+    <div class="relative h-64 sm:h-72">
+      <canvas id="chartKecTrend"></canvas>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm md:text-base border-collapse">
+        <thead>
+          <tr class="border-b border-slate-200 text-slate-500 text-xs md:text-sm uppercase">
+            <th class="py-3 px-3">Tahun</th>
+            <th class="py-3 px-3">Kecamatan</th>
+            <th class="py-3 px-3 text-right">Luas Panen (Ha)</th>
+            <th class="py-3 px-3 text-right">Produksi (Ton)</th>
+            <th class="py-3 px-3 text-right">Produktivitas (Kw/Ha)</th>
+            <th class="py-3 px-3 text-center">Klaster</th>
+            <th class="py-3 px-3 text-right">Silhouette Coefficient</th>
+          </tr>
+        </thead>
+        <tbody id="tbodyEvalHistory">
+          {% for r in history %}
+            <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+              <td class="py-3 px-3 font-bold">{{ r.tahun }}</td>
+              <td class="py-3 px-3">{{ r.kecamatan }}</td>
+              <td class="py-3 px-3 text-right">{{ r.luas_panen | angka }}</td>
+              <td class="py-3 px-3 text-right font-bold">{{ r.produksi | angka }}</td>
+              <td class="py-3 px-3 text-right">{{ r.produktivitas | angka }}</td>
+              <td class="py-3 px-3 text-center whitespace-nowrap">
+                {% if r.klaster %}
+                  {% set wk = warna_klaster(r.k, r.klaster) %}
+                  <span class="inline-flex items-center gap-1 whitespace-nowrap px-3 py-1 rounded-full text-xs md:text-sm font-bold text-[#142d1d]" style="background: {{ wk }}33; border: 1px solid {{ wk }}">
+                    Klaster {{ r.klaster }}{% if r.is_medoid %} ⭐{% endif %}
+                  </span>
+                {% else %}
+                  <span class="text-xs text-slate-400">–</span>
+                {% endif %}
+              </td>
+              <td class="py-3 px-3 text-right font-bold">
+                {{ r.silhouette | angka(4) if r.silhouette is not none else '–' }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script id="sigaguInitialData" type="application/json">
+  {{ {"history": history, "selectedYear": selected_year, "mapConfig": map_config, "palet": palet_k} | tojson }}
+</script>
+<script src="{{ url_for('static', filename='js/map_gis.js') }}"></script>
+<script>
+  let kecTrendChart = null;
+  const rawInitEl = document.getElementById("sigaguInitialData");
+  const parsedInit = rawInitEl ? JSON.parse(rawInitEl.textContent) : {};
+  const initialHistory = parsedInit.history || [];
+  const selectedYear = parsedInit.selectedYear || 2025;
+  const mapConfig = parsedInit.mapConfig || {};
+  const paletK = parsedInit.palet || {};
+
+  function fmtId(val, digits = 2) {
+    if (val === null || val === undefined) return "–";
+    return Number(val).toLocaleString("id-ID", {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  }
+
+  function renderTrendChart(historyData) {
+    const ctx = document.getElementById("chartKecTrend");
+    if (!ctx) return;
+
+    const sorted = [...historyData].sort((a, b) => a.tahun - b.tahun);
+    const labels = sorted.map((r) => r.tahun);
+    const produksiData = sorted.map((r) => r.produksi);
+    const luasData = sorted.map((r) => r.luas_panen);
+
+    if (kecTrendChart) {
+      kecTrendChart.destroy();
+    }
+
+    const isMobile = window.innerWidth < 640;
+
+    kecTrendChart = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            type: "line",
+            label: "Produksi (Ton)",
+            data: produksiData,
+            borderColor: "#15803d",
+            backgroundColor: "rgba(21, 128, 61, 0.15)",
+            borderWidth: 3,
+            tension: 0.3,
+            fill: true,
+            yAxisID: "y",
+          },
+          {
+            type: "bar",
+            label: "Luas Panen (Ha)",
+            data: luasData,
+            backgroundColor: "#a3e635",
+            borderRadius: 6,
+            yAxisID: "y1",
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: {
+            type: "linear",
+            position: "left",
+            title: { display: !isMobile, text: "Produksi (Ton)" },
+          },
+          y1: {
+            type: "linear",
+            position: "right",
+            grid: { drawOnChartArea: false },
+            title: { display: !isMobile, text: "Luas Panen (Ha)" },
+          },
+        },
+      },
+    });
+  }
+
+  function updateHistoryTable(historyData) {
+    const tbody = document.getElementById("tbodyEvalHistory");
+    if (!tbody) return;
+
+    const sorted = [...historyData].sort((a, b) => a.tahun - b.tahun);
+    tbody.innerHTML = sorted
+      .map((r) => {
+        const palet = paletK[String(r.k)] || paletK["3"] || [];
+        const warna = palet[(r.klaster || 1) - 1] || "#cbd5e1";
+        const star = r.is_medoid ? " ⭐" : "";
+        const klasterHtml = r.klaster
+          ? `<span class="inline-flex items-center gap-1 whitespace-nowrap px-3 py-1 rounded-full text-xs md:text-sm font-bold text-[#142d1d]" style="background:${warna}33;border:1px solid ${warna}">Klaster ${r.klaster}${star}</span>`
+          : `<span class="text-xs text-slate-400">–</span>`;
+
+        return `
+          <tr class="border-b border-slate-100 hover:bg-slate-50/80">
+            <td class="py-3 px-3 font-bold">${r.tahun}</td>
+            <td class="py-3 px-3">${r.kecamatan}</td>
+            <td class="py-3 px-3 text-right">${fmtId(r.luas_panen, 2)}</td>
+            <td class="py-3 px-3 text-right font-bold">${fmtId(r.produksi, 2)}</td>
+            <td class="py-3 px-3 text-right">${fmtId(r.produktivitas, 2)}</td>
+            <td class="py-3 px-3 text-center whitespace-nowrap">${klasterHtml}</td>
+            <td class="py-3 px-3 text-right font-bold">${fmtId(r.silhouette, 4)}</td>
+          </tr>
+        `;
+      })
+      .join("");
+  }
+
+  async function onPolygonClick(kecId, kecName, rec) {
+    document.getElementById("lblKecName").textContent = `Kec. ${kecName}`;
+    document.getElementById("lblEvalKec").textContent = `Kec. ${kecName}`;
+
+    const selectKec = document.getElementById("selectKec");
+    if (selectKec && kecId) {
+      selectKec.value = String(kecId);
+    }
+
+    if (rec) {
+      const labelKey = rec.klaster ? `c${rec.klaster}_label` : null;
+      document.getElementById("lblKecKlaster").textContent =
+        labelKey && mapConfig[labelKey] ? mapConfig[labelKey] : `Klaster ${rec.klaster || "–"}`;
+
+      const badgeMedoid = document.getElementById("badgeMedoid");
+      if (badgeMedoid) {
+        badgeMedoid.classList.toggle("hidden", !rec.is_medoid);
+      }
+      const valLuas = document.getElementById("valLuas");
+      if (valLuas) valLuas.innerHTML = `${fmtId(rec.luas_panen, 2)} <span class="text-xs font-normal">Ha</span>`;
+      const valProduksi = document.getElementById("valProduksi");
+      if (valProduksi) valProduksi.innerHTML = `${fmtId(rec.produksi, 2)} <span class="text-xs font-normal text-white">Ton</span>`;
+      const valProduktivitas = document.getElementById("valProduktivitas");
+      if (valProduktivitas) valProduktivitas.innerHTML = `${fmtId(rec.produktivitas, 2)} <span class="text-xs font-normal">Kw/Ha</span>`;
+      const valSilhouette = document.getElementById("valSilhouette");
+      if (valSilhouette) valSilhouette.textContent = fmtId(rec.silhouette, 4);
+    }
+
+    if (kecId) {
+      try {
+        const res = await fetch(`/api/kecamatan/${kecId}/riwayat`);
+        if (res.ok) {
+          const payload = await res.json();
+          renderTrendChart(payload.riwayat || []);
+          updateHistoryTable(payload.riwayat || []);
+          window.history.replaceState(null, "", `/?tahun=${selectedYear}&kecamatan=${kecId}`);
+        }
+      } catch (err) {
+        console.error("Gagal memuat riwayat kecamatan:", err);
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    renderTrendChart(initialHistory);
+    initSigaguMap("mapPublic", selectedYear, onPolygonClick);
+  });
+</script>
+{% endblock %}

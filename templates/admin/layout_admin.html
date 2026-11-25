@@ -1,0 +1,28 @@
+{% extends "partials/panel_shell.html" %}
+{% import "partials/_nav.html" as nav %}
+
+{% block panel_title %}Admin Workspace{% endblock %}
+
+{% block role_badge %}
+<span class="text-[10px] px-2 py-0.5 rounded bg-[#ccf34b] text-[#142d1d] font-extrabold">ADMIN</span>
+{% endblock %}
+
+{% block topbar_badge %}
+<span class="text-[10px] px-2 py-0.5 rounded bg-[#ccf34b] text-[#142d1d] font-extrabold">ADMIN</span>
+{% endblock %}
+
+{% block nav_items %}
+{{ nav.nav_link('admin_dashboard', 'Dashboard', 'dashboard', request.endpoint) }}
+{{ nav.nav_link('admin_data_pertanian', 'Kelola Data Pertanian', 'data', request.endpoint) }}
+{{ nav.nav_link('admin_clustering', 'Clustering', 'cluster', request.endpoint) }}
+{{ nav.nav_link('admin_pemetaan', 'Kelola Pemetaan', 'map', request.endpoint) }}
+{{ nav.nav_link('admin_validasi_operator', 'Validasi Operator', 'users', request.endpoint, pending_operator) }}
+{% endblock %}
+
+{% block foot_items %}
+{{ nav.foot_link('index', 'Lihat Peta Publik', 'globe', 'text-emerald-200') }}
+{{ nav.foot_link('ganti_password', 'Ganti Password', 'key', 'text-slate-300') }}
+{{ nav.foot_link('logout', 'Logout', 'logout', 'text-rose-300 font-extrabold') }}
+{% endblock %}
+
+{% block panel_content %}{% block admin_content %}{% endblock %}{% endblock %}
